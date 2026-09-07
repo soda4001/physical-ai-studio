@@ -612,11 +612,14 @@ class PhysicsViewport {
                 this.armJoints[0].rotation.y = this.teleopState.armYaw;
                 this.armJoints[0].rotation.z = this.teleopState.armShoulder;
                 this.armJoints[1].rotation.z = this.teleopState.armElbow;
-                this.armJoints[2].rotation.z = Math.PI - (this.teleopState.armShoulder + this.teleopState.armElbow);
+
+                const isArmMoved = Math.abs(this.teleopState.armShoulder) > 0.05 || Math.abs(this.teleopState.armElbow) > 0.05;
+                const targetW = isArmMoved ? -Math.PI - (this.teleopState.armShoulder + this.teleopState.armElbow) : 0.0;
+                this.armJoints[2].rotation.z = THREE.MathUtils.lerp(this.armJoints[2].rotation.z, targetW, 0.12);
             }
 
             if (this.gripperFingers.length === 2) {
-                const targetX = this.teleopState.gripperOpen ? 0.08 : 0.055;
+                const targetX = this.teleopState.gripperOpen ? 0.09 : 0.045;
                 this.gripperFingers[0].position.x = -targetX;
                 this.gripperFingers[1].position.x = targetX;
             }
@@ -662,8 +665,12 @@ class PhysicsViewport {
                 this.armJoints[0].rotation.z = sAngle;
                 this.armJoints[1].rotation.z = eAngle;
 
-                // Wrist Pitch Joint: Smoothly rotate to point straight DOWN when picking/dumping, or 0 in home position!
-                const targetW = (step.type === 'home_arm') ? 0.0 : -Math.PI - (sAngle + eAngle);
+                // Wrist Pitch Joint: 0 in Home/Pick, -1.57 in Lift, -0.84 in Dump
+                let targetW = 0.0;
+                if (step.type === 'lift_arm') targetW = -Math.PI / 2;
+                else if (step.type === 'dump_arm') targetW = -0.84;
+                else targetW = 0.0;
+
                 this.armJoints[2].rotation.z = THREE.MathUtils.lerp(this.armJoints[2].rotation.z, targetW, 0.15);
             }
         } else if (step.type === 'grip_open') {
