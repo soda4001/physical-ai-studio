@@ -209,44 +209,93 @@ class PhysicsViewport {
         link2.castShadow = true;
         j2Pivot.add(link2);
 
-        // Joint 3: Wrist Pitch Pivot (j3Pivot) - Keeps Gripper Pointing Straight Down!
+        // Joint 3: Wrist Pitch Pivot (j3Pivot)
         const j3Pivot = new THREE.Group();
         j3Pivot.position.set(0, 0.3, 0);
-        j3Pivot.rotation.z = Math.PI; // Initial orientation: pointing straight down (-Y)
+        j3Pivot.rotation.z = 0; // Initial orientation: aligned naturally with arm in home position
         j2Pivot.add(j3Pivot);
         this.armJoints.push(j3Pivot); // armJoints[2]
 
-        // End-Effector Gripper
+        // End-Effector 2-Jaw Parallel Gripper Assembly
         const gripperGroup = new THREE.Group();
         j3Pivot.add(gripperGroup);
         this.gripperGroup = gripperGroup;
 
-        const plateGeo = new THREE.BoxGeometry(0.16, 0.02, 0.06);
-        const plateMat = new THREE.MeshStandardMaterial({ color: 0x334155 });
-        const plate = new THREE.Mesh(plateGeo, plateMat);
-        plate.position.y = 0.01;
-        gripperGroup.add(plate);
+        // 1. Wrist Mount Bracket (Dark Metallic Steel)
+        const mountGeo = new THREE.CylinderGeometry(0.04, 0.045, 0.03, 16);
+        const mountMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.8, roughness: 0.3 });
+        const mount = new THREE.Mesh(mountGeo, mountMat);
+        mount.position.y = 0.015;
+        gripperGroup.add(mount);
 
+        // 2. Linear Finger Slide Rail Chassis
+        const railGeo = new THREE.BoxGeometry(0.18, 0.025, 0.06);
+        const railMat = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.9, roughness: 0.2 });
+        const rail = new THREE.Mesh(railGeo, railMat);
+        rail.position.y = 0.035;
+        gripperGroup.add(rail);
+
+        // 3. Status LED Accent Bar
+        const statusGeo = new THREE.BoxGeometry(0.08, 0.01, 0.062);
+        const statusMat = new THREE.MeshStandardMaterial({ color: 0x00f2fe, emissive: 0x00f2fe, emissiveIntensity: 0.8 });
+        const statusMesh = new THREE.Mesh(statusGeo, statusMat);
+        statusMesh.position.y = 0.035;
+        gripperGroup.add(statusMesh);
+
+        // 4. Left & Right Articulated Claw Fingers (Open Gap by default)
         const fingerMat = new THREE.MeshStandardMaterial({
             color: 0x00f5a0,
             emissive: 0x00f5a0,
-            emissiveIntensity: 0.2
+            emissiveIntensity: 0.3,
+            metalness: 0.6,
+            roughness: 0.2
         });
 
-        const fingerGeo = new THREE.BoxGeometry(0.02, 0.14, 0.04);
+        const padMat = new THREE.MeshStandardMaterial({
+            color: 0x0f172a,
+            roughness: 0.9
+        });
 
-        const fingerL = new THREE.Mesh(fingerGeo, fingerMat);
-        fingerL.position.set(-0.08, 0.07, 0);
-        fingerL.castShadow = true;
-        gripperGroup.add(fingerL);
+        // Left Claw Assembly Group
+        const clawL = new THREE.Group();
+        clawL.position.set(-0.08, 0.04, 0); // Wide open state (0.16m span)
 
-        const fingerR = new THREE.Mesh(fingerGeo, fingerMat);
-        fingerR.position.set(0.08, 0.07, 0);
-        fingerR.castShadow = true;
-        gripperGroup.add(fingerR);
+        const fPostL = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.12, 0.04), fingerMat);
+        fPostL.position.set(0, 0.06, 0);
+        fPostL.castShadow = true;
+        clawL.add(fPostL);
+
+        const fTipL = new THREE.Mesh(new THREE.BoxGeometry(0.025, 0.02, 0.04), fingerMat);
+        fTipL.position.set(0.01, 0.12, 0);
+        clawL.add(fTipL);
+
+        const padL = new THREE.Mesh(new THREE.BoxGeometry(0.008, 0.10, 0.035), padMat);
+        padL.position.set(0.012, 0.06, 0);
+        clawL.add(padL);
+
+        gripperGroup.add(clawL);
+
+        // Right Claw Assembly Group
+        const clawR = new THREE.Group();
+        clawR.position.set(0.08, 0.04, 0); // Wide open state
+
+        const fPostR = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.12, 0.04), fingerMat);
+        fPostR.position.set(0, 0.06, 0);
+        fPostR.castShadow = true;
+        clawR.add(fPostR);
+
+        const fTipR = new THREE.Mesh(new THREE.BoxGeometry(0.025, 0.02, 0.04), fingerMat);
+        fTipR.position.set(-0.01, 0.12, 0);
+        clawR.add(fTipR);
+
+        const padR = new THREE.Mesh(new THREE.BoxGeometry(0.008, 0.10, 0.035), padMat);
+        padR.position.set(-0.012, 0.06, 0);
+        clawR.add(padR);
+
+        gripperGroup.add(clawR);
 
         this.fingerMat = fingerMat;
-        this.gripperFingers = [fingerL, fingerR];
+        this.gripperFingers = [clawL, clawR];
     }
 
     spawnTrashPickerEnvironment() {
@@ -555,8 +604,9 @@ class PhysicsViewport {
                 this.armJoints[0].rotation.z = sAngle;
                 this.armJoints[1].rotation.z = eAngle;
 
-                // Wrist Pitch Joint keeps Gripper pointing straight DOWN toward ground!
-                this.armJoints[2].rotation.z = Math.PI - (sAngle + eAngle);
+                // Wrist Pitch Joint: Smoothly rotate to point straight DOWN when picking/dumping, or 0 in home position!
+                const targetW = (step.type === 'home_arm') ? 0.0 : -Math.PI - (sAngle + eAngle);
+                this.armJoints[2].rotation.z = THREE.MathUtils.lerp(this.armJoints[2].rotation.z, targetW, 0.15);
             }
         } else if (step.type === 'grip_open') {
             if (this.gripperFingers.length === 2) {
@@ -567,15 +617,15 @@ class PhysicsViewport {
 
         } else if (step.type === 'grip_close_center' || step.type === 'grip_close') {
             if (this.gripperFingers.length === 2) {
-                this.gripperFingers[0].position.x = THREE.MathUtils.lerp(this.gripperFingers[0].position.x, -0.055, 0.25);
-                this.gripperFingers[1].position.x = THREE.MathUtils.lerp(this.gripperFingers[1].position.x, 0.055, 0.25);
+                this.gripperFingers[0].position.x = THREE.MathUtils.lerp(this.gripperFingers[0].position.x, -0.045, 0.25);
+                this.gripperFingers[1].position.x = THREE.MathUtils.lerp(this.gripperFingers[1].position.x, 0.045, 0.25);
             }
             if (this.fingerMat) this.fingerMat.emissiveIntensity = 1.0; // Glow green on contact!
 
             if (state.targetObj && !state.heldObject) {
                 // Attach object to Gripper Tip & Center it EXACTLY between the finger pads!
                 this.gripperGroup.add(state.targetObj);
-                state.targetObj.position.set(0, 0.08, 0); // Directly centered inside finger pads
+                state.targetObj.position.set(0, 0.10, 0); // Position inside claw opening
                 state.targetObj.rotation.set(0, 0, 0);
                 state.heldObject = state.targetObj;
             }
