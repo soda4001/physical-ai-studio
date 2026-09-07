@@ -1,5 +1,5 @@
 /**
- * Physical AI Studio - 3-DOF Kinematic Robot Arm with Coordinated Forward Joint Bending
+ * Physical AI Studio - 3-DOF Kinematic Robot Arm with Robust Animation & Object Lookup Engine
  */
 
 class PhysicsViewport {
@@ -344,16 +344,34 @@ class PhysicsViewport {
         this.armJoints = [spindle];
     }
 
-    // 🤖 Coordinated Forward Joint Kinematics Sequence
+    // 🤖 Fail-Safe Kinematic Robot Sequence Launcher
     startPickSequence(objKey = 'red_can') {
-        const targetObj = this.spawnedObjects[objKey] || this.spawnedObjects['red_can'];
-        if (!targetObj) return;
+        let targetObj = this.spawnedObjects[objKey] || this.spawnedObjects['red_can'];
+
+        // Fallback search if exact key is missing
+        if (!targetObj) {
+            const keys = Object.keys(this.spawnedObjects);
+            for (let k of keys) {
+                if (objKey === 'blue_bottle' && (k.includes('bottle') || k.includes('blue'))) {
+                    targetObj = this.spawnedObjects[k];
+                    break;
+                } else if (k.includes('can') || k.includes('red') || k.includes('trash')) {
+                    targetObj = this.spawnedObjects[k];
+                    break;
+                }
+            }
+        }
+
+        // Guarantee target object exists
+        if (!targetObj) {
+            this.spawnTrashPickerEnvironment();
+            targetObj = this.spawnedObjects['red_can'];
+        }
 
         const targetPos = targetObj.position.clone();
         const binObj = this.spawnedObjects['bin'];
         const binPos = binObj ? binObj.position.clone() : new THREE.Vector3(1.5, 0.15, 0.6);
 
-        // Safe stand-off distance (0.50m in front of object)
         const driveTarget = new THREE.Vector3(targetPos.x - 0.50, 0, targetPos.z);
         const binDriveTarget = new THREE.Vector3(binPos.x - 0.50, 0, binPos.z);
 
@@ -366,29 +384,32 @@ class PhysicsViewport {
             progress: 0,
             heldObject: null,
             sequence: [
-                // 1. Drive base to target
+                // 1. Drive base to target (2.0s)
                 { type: 'drive_to', target: driveTarget, duration: 2.0 },
-                // 2. Open Gripper Fingers wide (0.08m)
+                // 2. Open Gripper (0.5s)
                 { type: 'grip_open', duration: 0.5 },
-                // 3. Both Shoulder (-0.75) and Elbow (-0.75) bend FORWARD & DOWN to reach floor can!
+                // 3. Lower Arm Joints Forward/Down: Shoulder -0.75, Elbow -0.75 (1.8s)
                 { type: 'lower_arm', shoulder: -0.75, elbow: -0.75, duration: 1.8 },
-                // 4. Gripper Fingers Squeeze & Clamp Can tightly (0.055m contact)
+                // 4. Gripper Fingers Close and Clamp Can (0.8s)
                 { type: 'grip_close', duration: 0.8 },
-                // 5. Lift Arm Joints Up carrying Can (Shoulder -0.2, Elbow -0.2)
+                // 5. Lift Arm Joints Up carrying Can: Shoulder -0.2, Elbow -0.2 (1.6s)
                 { type: 'lift_arm', shoulder: -0.2, elbow: -0.2, duration: 1.6 },
-                // 6. Drive Robot to Recycle Bin
+                // 6. Drive Robot to Recycle Bin (2.5s)
                 { type: 'drive_to_bin', target: binDriveTarget, duration: 2.5 },
-                // 7. Extend Arm over Bin (Shoulder -0.6, Elbow -0.5)
+                // 7. Extend Arm over Bin: Shoulder -0.6, Elbow -0.5 (1.4s)
                 { type: 'dump_arm', shoulder: -0.6, elbow: -0.5, duration: 1.4 },
-                // 8. Open Gripper to Drop Can inside Bin
+                // 8. Open Gripper to Drop Can inside Bin (0.8s)
                 { type: 'grip_open_drop', duration: 0.8 },
-                // 9. Return Arm Joints to Home Position
+                // 9. Return Arm Joints to Home Position (1.2s)
                 { type: 'home_arm', shoulder: 0.0, elbow: 0.0, duration: 1.2 }
             ]
         };
 
+        const statusEl = document.getElementById('simStatusText');
+        if (statusEl) statusEl.textContent = 'RUNNING AI POLICY';
+
         if (window.appLog) {
-            window.appLog(`[Kinematics AI] 🦾 Robot Arm Bending Forward Down to Pick ${objKey}...`, 'success');
+            window.appLog(`[Kinematics AI] 🦾 Robot Arm Moving to Pick ${objKey}...`, 'success');
         }
     }
 
@@ -485,6 +506,8 @@ class PhysicsViewport {
         const state = this.animState;
         if (state.currentStep >= state.sequence.length) {
             state.active = false;
+            const statusEl = document.getElementById('simStatusText');
+            if (statusEl) statusEl.textContent = 'PHYSICS RUNNING';
             if (window.appLog) window.appLog('[Kinematics AI] Pick & Dump Task Complete!', 'success');
             return;
         }
@@ -494,21 +517,22 @@ class PhysicsViewport {
         const t = Math.min(1.0, state.progress);
 
         if (step.type === 'drive_to' || step.type === 'drive_to_bin' || step.type === 'walk_to_ball') {
-            this.robotGroup.position.lerp(step.target, 0.08);
+            this.robotGroup.position.x = THREE.MathUtils.lerp(this.robotGroup.position.x, step.target.x, 0.1);
+            this.robotGroup.position.z = THREE.MathUtils.lerp(this.robotGroup.position.z, step.target.z, 0.1);
             
             const dx = step.target.x - this.robotGroup.position.x;
             const dz = step.target.z - this.robotGroup.position.z;
             if (Math.abs(dx) > 0.01 || Math.abs(dz) > 0.01) {
                 const targetYaw = -Math.atan2(dz, dx);
-                this.robotGroup.rotation.y = THREE.MathUtils.lerp(this.robotGroup.rotation.y, targetYaw, 0.1);
+                this.robotGroup.rotation.y = THREE.MathUtils.lerp(this.robotGroup.rotation.y, targetYaw, 0.15);
             }
             this.wheels.forEach(w => w.rotation.x += 0.15);
 
         } else if (step.type === 'lower_arm' || step.type === 'lift_arm' || step.type === 'dump_arm' || step.type === 'home_arm') {
             if (this.armJoints.length >= 3) {
-                // Rotate shoulder and elbow joints FORWARD together
-                const sAngle = THREE.MathUtils.lerp(this.armJoints[0].rotation.z, step.shoulder, 0.08);
-                const eAngle = THREE.MathUtils.lerp(this.armJoints[1].rotation.z, step.elbow, 0.08);
+                // Rotate shoulder and elbow joints FORWARD together smoothly
+                const sAngle = THREE.MathUtils.lerp(this.armJoints[0].rotation.z, step.shoulder, 0.12);
+                const eAngle = THREE.MathUtils.lerp(this.armJoints[1].rotation.z, step.elbow, 0.12);
                 
                 this.armJoints[0].rotation.z = sAngle;
                 this.armJoints[1].rotation.z = eAngle;
@@ -518,8 +542,8 @@ class PhysicsViewport {
             }
         } else if (step.type === 'grip_open') {
             if (this.gripperFingers.length === 2) {
-                this.gripperFingers[0].position.x = THREE.MathUtils.lerp(this.gripperFingers[0].position.x, -0.08, 0.15);
-                this.gripperFingers[1].position.x = THREE.MathUtils.lerp(this.gripperFingers[1].position.x, 0.08, 0.15);
+                this.gripperFingers[0].position.x = THREE.MathUtils.lerp(this.gripperFingers[0].position.x, -0.08, 0.2);
+                this.gripperFingers[1].position.x = THREE.MathUtils.lerp(this.gripperFingers[1].position.x, 0.08, 0.2);
             }
             if (this.fingerMat) this.fingerMat.emissiveIntensity = 0.2;
 
