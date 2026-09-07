@@ -1,5 +1,6 @@
 /**
- * Physical AI Studio - 3-DOF Kinematic Robot Arm with Robust Animation & Object Lookup Engine
+ * Physical AI Studio - Three.js 3D Physics Viewport
+ * Features "ㄱ" L-Shape Articulated Arm Kinematics & Precision Gripper Clamping
  */
 
 class PhysicsViewport {
@@ -16,6 +17,7 @@ class PhysicsViewport {
         this.wheels = [];
         this.gripperFingers = [];
         this.spawnedObjects = {};
+        this.targetMarker = null;
         this.currentSceneId = 'trash_picker';
 
         // Teleop & Animation State
@@ -100,6 +102,14 @@ class PhysicsViewport {
         ground.rotation.x = -Math.PI / 2;
         ground.receiveShadow = true;
         this.scene.add(ground);
+
+        // 3D Target Detection Ring Marker
+        const ringGeo = new THREE.RingGeometry(0.12, 0.15, 32);
+        const ringMat = new THREE.MeshBasicMaterial({ color: 0x00f2fe, side: THREE.DoubleSide, transparent: true, opacity: 0 });
+        this.targetMarker = new THREE.Mesh(ringGeo, ringMat);
+        this.targetMarker.rotation.x = -Math.PI / 2;
+        this.targetMarker.position.y = 0.01;
+        this.scene.add(this.targetMarker);
     }
 
     clearScene() {
@@ -187,7 +197,7 @@ class PhysicsViewport {
         link1.castShadow = true;
         j1Pivot.add(link1);
 
-        // Joint 2: Elbow Pivot (j2Pivot)
+        // Joint 2: Elbow Pivot (j2Pivot) - Creates "ㄱ" Bend
         const j2Pivot = new THREE.Group();
         j2Pivot.position.set(0, 0.35, 0);
         j1Pivot.add(j2Pivot);
@@ -202,10 +212,11 @@ class PhysicsViewport {
         // Joint 3: Wrist Pitch Pivot (j3Pivot) - Keeps Gripper Pointing Straight Down!
         const j3Pivot = new THREE.Group();
         j3Pivot.position.set(0, 0.3, 0);
+        j3Pivot.rotation.z = Math.PI; // Initial orientation: pointing straight down (-Y)
         j2Pivot.add(j3Pivot);
         this.armJoints.push(j3Pivot); // armJoints[2]
 
-        // End-Effector Tactile Gripper
+        // End-Effector Gripper
         const gripperGroup = new THREE.Group();
         j3Pivot.add(gripperGroup);
         this.gripperGroup = gripperGroup;
@@ -344,25 +355,23 @@ class PhysicsViewport {
         this.armJoints = [spindle];
     }
 
-    // 🤖 Fail-Safe Kinematic Robot Sequence Launcher
+    // 🤖 "ㄱ" L-Shaped Articulated Robot Arm Sequence
     startPickSequence(objKey = 'red_can') {
-        let targetObj = this.spawnedObjects[objKey] || this.spawnedObjects['red_can'];
+        let targetObj = this.spawnedObjects[objKey];
 
-        // Fallback search if exact key is missing
         if (!targetObj) {
             const keys = Object.keys(this.spawnedObjects);
             for (let k of keys) {
-                if (objKey === 'blue_bottle' && (k.includes('bottle') || k.includes('blue'))) {
+                if ((objKey.includes('blue') || objKey.includes('bottle')) && (k.includes('bottle') || k.includes('blue'))) {
                     targetObj = this.spawnedObjects[k];
                     break;
-                } else if (k.includes('can') || k.includes('red') || k.includes('trash')) {
+                } else if ((objKey.includes('red') || objKey.includes('can')) && (k.includes('can') || k.includes('red'))) {
                     targetObj = this.spawnedObjects[k];
                     break;
                 }
             }
         }
 
-        // Guarantee target object exists
         if (!targetObj) {
             this.spawnTrashPickerEnvironment();
             targetObj = this.spawnedObjects['red_can'];
@@ -372,8 +381,15 @@ class PhysicsViewport {
         const binObj = this.spawnedObjects['bin'];
         const binPos = binObj ? binObj.position.clone() : new THREE.Vector3(1.5, 0.15, 0.6);
 
-        const driveTarget = new THREE.Vector3(targetPos.x - 0.50, 0, targetPos.z);
-        const binDriveTarget = new THREE.Vector3(binPos.x - 0.50, 0, binPos.z);
+        // Highlight Target Object with Neon Ring Detection Marker
+        if (this.targetMarker) {
+            this.targetMarker.position.set(targetPos.x, 0.01, targetPos.z);
+            this.targetMarker.material.opacity = 0.9;
+        }
+
+        // Exact base reach distance = 0.504m for "ㄱ" L-shape elbow reach to target position
+        const driveTarget = new THREE.Vector3(targetPos.x - 0.504, 0, targetPos.z);
+        const binDriveTarget = new THREE.Vector3(binPos.x - 0.504, 0, binPos.z);
 
         this.animState = {
             active: true,
@@ -384,23 +400,23 @@ class PhysicsViewport {
             progress: 0,
             heldObject: null,
             sequence: [
-                // 1. Drive base to target (2.0s)
+                // 1. Drive base to target position (2.0s)
                 { type: 'drive_to', target: driveTarget, duration: 2.0 },
-                // 2. Open Gripper (0.5s)
+                // 2. Open Gripper Fingers wide (0.08m)
                 { type: 'grip_open', duration: 0.5 },
-                // 3. Lower Arm Joints Forward/Down: Shoulder -0.75, Elbow -0.75 (1.8s)
-                { type: 'lower_arm', shoulder: -0.75, elbow: -0.75, duration: 1.8 },
-                // 4. Gripper Fingers Close and Clamp Can (0.8s)
-                { type: 'grip_close', duration: 0.8 },
-                // 5. Lift Arm Joints Up carrying Can: Shoulder -0.2, Elbow -0.2 (1.6s)
-                { type: 'lift_arm', shoulder: -0.2, elbow: -0.2, duration: 1.6 },
-                // 6. Drive Robot to Recycle Bin (2.5s)
+                // 3. Form precise "ㄱ" L-Shape Bend down to ground level (y=0.08m): Shoulder -1.05rad (-60°), Elbow -2.02rad (-116°)
+                { type: 'lower_arm_L_shape', shoulder: -1.05, elbow: -2.02, duration: 1.8 },
+                // 4. Gripper Fingers Squeeze & Clamp Object directly between finger pads!
+                { type: 'grip_close_center', duration: 0.8 },
+                // 5. Lift Arm UP carrying target object: Shoulder -0.40rad, Elbow -1.20rad
+                { type: 'lift_arm', shoulder: -0.40, elbow: -1.20, duration: 1.6 },
+                // 6. Drive Robot Base to Recycle Bin (2.5s)
                 { type: 'drive_to_bin', target: binDriveTarget, duration: 2.5 },
-                // 7. Extend Arm over Bin: Shoulder -0.6, Elbow -0.5 (1.4s)
-                { type: 'dump_arm', shoulder: -0.6, elbow: -0.5, duration: 1.4 },
-                // 8. Open Gripper to Drop Can inside Bin (0.8s)
+                // 7. Extend Arm over Bin: Shoulder -0.80rad, Elbow -1.50rad
+                { type: 'dump_arm', shoulder: -0.80, elbow: -1.50, duration: 1.4 },
+                // 8. Open Gripper to Drop Object inside Bin
                 { type: 'grip_open_drop', duration: 0.8 },
-                // 9. Return Arm Joints to Home Position (1.2s)
+                // 9. Return Arm Joints to Home Position (Shoulder 0, Elbow 0)
                 { type: 'home_arm', shoulder: 0.0, elbow: 0.0, duration: 1.2 }
             ]
         };
@@ -409,7 +425,7 @@ class PhysicsViewport {
         if (statusEl) statusEl.textContent = 'RUNNING AI POLICY';
 
         if (window.appLog) {
-            window.appLog(`[Kinematics AI] 🦾 Robot Arm Moving to Pick ${objKey}...`, 'success');
+            window.appLog(`[Kinematics AI] 🦾 Robot Arm Forming 'ㄱ' L-Shape to Pick Target Object...`, 'success');
         }
     }
 
@@ -485,10 +501,11 @@ class PhysicsViewport {
 
             this.wheels.forEach(w => w.rotation.x += speed * 5);
 
-            if (this.armJoints.length >= 2) {
+            if (this.armJoints.length >= 3) {
                 this.armJoints[0].rotation.y = this.teleopState.armYaw;
                 this.armJoints[0].rotation.z = this.teleopState.armShoulder;
                 this.armJoints[1].rotation.z = this.teleopState.armElbow;
+                this.armJoints[2].rotation.z = Math.PI - (this.teleopState.armShoulder + this.teleopState.armElbow);
             }
 
             if (this.gripperFingers.length === 2) {
@@ -506,6 +523,7 @@ class PhysicsViewport {
         const state = this.animState;
         if (state.currentStep >= state.sequence.length) {
             state.active = false;
+            if (this.targetMarker) this.targetMarker.material.opacity = 0;
             const statusEl = document.getElementById('simStatusText');
             if (statusEl) statusEl.textContent = 'PHYSICS RUNNING';
             if (window.appLog) window.appLog('[Kinematics AI] Pick & Dump Task Complete!', 'success');
@@ -528,17 +546,17 @@ class PhysicsViewport {
             }
             this.wheels.forEach(w => w.rotation.x += 0.15);
 
-        } else if (step.type === 'lower_arm' || step.type === 'lift_arm' || step.type === 'dump_arm' || step.type === 'home_arm') {
+        } else if (step.type === 'lower_arm_L_shape' || step.type === 'lower_arm' || step.type === 'lift_arm' || step.type === 'dump_arm' || step.type === 'home_arm') {
             if (this.armJoints.length >= 3) {
-                // Rotate shoulder and elbow joints FORWARD together smoothly
+                // Form clear "ㄱ" L-shape elbow bend
                 const sAngle = THREE.MathUtils.lerp(this.armJoints[0].rotation.z, step.shoulder, 0.12);
                 const eAngle = THREE.MathUtils.lerp(this.armJoints[1].rotation.z, step.elbow, 0.12);
                 
                 this.armJoints[0].rotation.z = sAngle;
                 this.armJoints[1].rotation.z = eAngle;
 
-                // Wrist Pitch Joint keeps Gripper pointing straight DOWN toward the can!
-                this.armJoints[2].rotation.z = -(sAngle + eAngle);
+                // Wrist Pitch Joint keeps Gripper pointing straight DOWN toward ground!
+                this.armJoints[2].rotation.z = Math.PI - (sAngle + eAngle);
             }
         } else if (step.type === 'grip_open') {
             if (this.gripperFingers.length === 2) {
@@ -547,15 +565,18 @@ class PhysicsViewport {
             }
             if (this.fingerMat) this.fingerMat.emissiveIntensity = 0.2;
 
-        } else if (step.type === 'grip_close') {
+        } else if (step.type === 'grip_close_center' || step.type === 'grip_close') {
             if (this.gripperFingers.length === 2) {
-                this.gripperFingers[0].position.x = THREE.MathUtils.lerp(this.gripperFingers[0].position.x, -0.055, 0.2);
-                this.gripperFingers[1].position.x = THREE.MathUtils.lerp(this.gripperFingers[1].position.x, 0.055, 0.2);
+                this.gripperFingers[0].position.x = THREE.MathUtils.lerp(this.gripperFingers[0].position.x, -0.055, 0.25);
+                this.gripperFingers[1].position.x = THREE.MathUtils.lerp(this.gripperFingers[1].position.x, 0.055, 0.25);
             }
-            if (this.fingerMat) this.fingerMat.emissiveIntensity = 0.9;
+            if (this.fingerMat) this.fingerMat.emissiveIntensity = 1.0; // Glow green on contact!
 
             if (state.targetObj && !state.heldObject) {
-                this.gripperGroup.attach(state.targetObj);
+                // Attach object to Gripper Tip & Center it EXACTLY between the finger pads!
+                this.gripperGroup.add(state.targetObj);
+                state.targetObj.position.set(0, 0.08, 0); // Directly centered inside finger pads
+                state.targetObj.rotation.set(0, 0, 0);
                 state.heldObject = state.targetObj;
             }
         } else if (step.type === 'grip_open_drop') {
@@ -566,9 +587,10 @@ class PhysicsViewport {
             if (this.fingerMat) this.fingerMat.emissiveIntensity = 0.2;
 
             if (state.heldObject) {
-                this.scene.attach(state.heldObject);
+                this.scene.add(state.heldObject);
                 const dropPos = state.binPos || new THREE.Vector3(1.5, 0.15, 0.6);
                 state.heldObject.position.set(dropPos.x, 0.18, dropPos.z);
+                state.heldObject.rotation.set(0, 0, 0);
                 state.heldObject = null;
             }
         } else if (step.type === 'kick_motion') {
