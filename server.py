@@ -8,7 +8,9 @@ and serves the Web IDE / Desktop App interface.
 import asyncio
 import json
 import os
+import socket
 import sys
+import threading
 import webbrowser
 from typing import Dict, Any, List
 
@@ -43,12 +45,12 @@ app.add_middleware(
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PUBLIC_DIR = os.path.join(BASE_DIR, "public")
 
-# Mock State & Physical AI Models / Scenes Repository
+# English Global Physical AI Models & Scenes Repository
 PHYSICAL_SCENES = {
     "trash_picker": {
         "id": "trash_picker",
-        "name": "🧹 이동형 스마트 쓰레기 픽업 로봇",
-        "description": "모바일 바퀴 섀시 + 4축 집게 로봇 팔 + YOLO 쓰레기 인식",
+        "name": "🧹 1. Mobile Smart Trash Picker Robot",
+        "description": "4-Wheel Mobile Chassis + 4-DOF Gripper Arm + Vision Recognition",
         "robot_type": "mobile_manipulator",
         "joints": ["wheel_left", "wheel_right", "arm_yaw", "arm_shoulder", "arm_elbow", "gripper"],
         "objects": ["trash_can_red", "trash_bottle", "recycle_bin"],
@@ -56,8 +58,8 @@ PHYSICAL_SCENES = {
     },
     "humanoid_kick": {
         "id": "humanoid_kick",
-        "name": "⚽ 휴머노이드 로봇 축구 & 보행",
-        "description": "하반신 12축 이족보행 + 공 추적 및 슈팅 키네마틱스",
+        "name": "⚽ 2. Humanoid Bipedal Soccer Robot",
+        "description": "12-DOF Bipedal Legs + Ball Tracking & Kicking Kinematics",
         "robot_type": "bipedal_humanoid",
         "joints": ["hip_yaw_l", "hip_roll_l", "knee_l", "ankle_l", "hip_yaw_r", "hip_roll_r", "knee_r", "ankle_r"],
         "objects": ["soccer_ball", "goal_post"],
@@ -65,8 +67,8 @@ PHYSICAL_SCENES = {
     },
     "sander_care": {
         "id": "sander_care",
-        "name": "💅 안전 샌딩형 케어 디바이스",
-        "description": "2축 정밀 마이크로 스핀들 + 비전 센서 경계 감지",
+        "name": "💅 3. Precision Safety Care Sander Device",
+        "description": "2-Axis Micro Spindle + Vision Sensor Boundary Detection",
         "robot_type": "precision_sander",
         "joints": ["spindle_x", "spindle_y", "tool_rotation"],
         "objects": ["finger_fixture", "safety_sensor"],
@@ -77,36 +79,36 @@ PHYSICAL_SCENES = {
 POLICIES = [
     {
         "id": "autonav_pick",
-        "name": "자율 탐색 & 픽업 (Autonav & Pick)",
+        "name": "Autonav & Pick",
         "category": "Mobile AI",
-        "description": "쓰레기 물체를 발견하면 자동으로 이동하여 집게로 파지 후 수거함에 덤프합니다.",
+        "description": "Autonomously navigates to detected target objects, clamps with gripper, and dumps into recycle bin.",
         "icon": "🧹",
         "file": "policies/autonav_pick.onnx",
         "params": {"speed": 0.8, "gripper_force": 2.5, "detect_confidence": 0.75},
     },
     {
         "id": "alpha_walk",
-        "name": "이족 보행 밸런스 (Alpha Walk)",
+        "name": "Alpha Walk",
         "category": "Humanoid",
-        "description": "강화학습 기반 12축 이족보행 보정 및 외란 보상 파리미터.",
+        "description": "Reinforcement learning 12-DOF bipedal walking & balance stabilization.",
         "icon": "🚶",
         "file": "policies/alpha_walking.onnx",
         "params": {"step_height": 0.05, "stride": 0.15, "frequency": 1.2},
     },
     {
         "id": "ball_kick_left",
-        "name": "왼발 킥 & 슈팅 (Ball Kick)",
+        "name": "Ball Kick (Left Leg)",
         "category": "Humanoid",
-        "description": "목표 공 위치를 계산하여 정밀하게 발로 차는 모션 궤적 생성.",
+        "description": "Calculates target ball position and executes precise shooting motion trajectory.",
         "icon": "⚽",
         "file": "policies/ball_kick_left.onnx",
         "params": {"kick_power": 8.0, "prep_time": 0.4},
     },
     {
         "id": "emergency_stand",
-        "name": "안정적 기립 (Safe Stand)",
+        "name": "Safe Stand",
         "category": "General",
-        "description": "넘어짐 감지 시 즉시 전관절 홈 포지션 복귀 및 자세 제어.",
+        "description": "Fall-detection recovery and instant joint home position stabilization.",
         "icon": "🛡️",
         "file": "policies/alpha_stand.onnx",
         "params": {"stiffness": 50.0, "damping": 5.0},
@@ -140,7 +142,7 @@ async def get_policies():
 
 @app.post("/api/copilot")
 async def process_copilot_prompt(payload: Dict[str, Any]):
-    """Processes natural language prompts for Physical AI control & generation."""
+    """Processes natural language prompts (English & Korean) for Physical AI control."""
     prompt = payload.get("prompt", "").strip()
     if not prompt:
         raise HTTPException(status_code=400, detail="Prompt is empty")
@@ -150,20 +152,20 @@ async def process_copilot_prompt(payload: Dict[str, Any]):
     action_type = "autonomous_pick"
     suggested_params = {}
 
-    if "파란" in prompt or "blue" in prompt_lower or "병" in prompt:
-        response_text = "🤖 **파란색 페트병 픽업 AI 동작**을 가동합니다.\n1. 파란 병 3D 위치 추적\n2. 로봇 이동 및 4축 로봇 팔 하강\n3. 집게 파지 후 수거함(Recycle Bin) 이동 & 덤프"
+    if "blue" in prompt_lower or "bottle" in prompt_lower or "파란" in prompt or "병" in prompt:
+        response_text = "🤖 **Blue Bottle Autonomous Pick AI Triggered**\n1. Tracking Blue Bottle 3D position\n2. Navigating mobile base & lowering arm joints\n3. Clamping with gripper & dumping into Recycle Bin"
         suggested_params = {"action": "pick", "target_object": "blue_bottle"}
-    elif "공" in prompt or "kick" in prompt_lower or "차" in prompt:
+    elif "kick" in prompt_lower or "ball" in prompt_lower or "soccer" in prompt_lower or "공" in prompt or "차" in prompt:
         action_type = "autonomous_kick"
-        response_text = "⚽ **축구 공 슈팅 AI 동작**을 가동합니다.\n1. 공 위치 추적\n2. 슈팅 준비 자세 및 킥 궤적 생성"
+        response_text = "⚽ **Soccer Ball Kick AI Triggered**\n1. Tracking ball 3D position\n2. Aligning shooting posture & executing leg kick trajectory"
         suggested_params = {"action": "kick", "target_object": "ball"}
-    elif "걸어가" in prompt or "walk" in prompt_lower or "이동" in prompt:
+    elif "walk" in prompt_lower or "move" in prompt_lower or "drive" in prompt_lower or "걸어가" in prompt or "이동" in prompt:
         action_type = "autonomous_walk"
-        response_text = "🚶 **보행 및 이동 궤적**을 가동합니다."
+        response_text = "🚶 **Bipedal Walk & Motion Trajectory Triggered**\n1. Adjusting step height & stride frequency"
         suggested_params = {"action": "walk", "target_object": "forward"}
     else:
-        # Default for any pick, red can, item, trash, or general prompt (e.g. 빨간캔, 집어줘, 물건)
-        response_text = f"🤖 **빨간색 캔 픽업 AI 동작**을 가동합니다.\n1. 빨간 캔 3D 위치 추적\n2. 로봇 이동 및 4축 로봇 팔 하강\n3. 집게 파지 후 수거함(Recycle Bin) 이동 & 덤프"
+        # Default for red can / pick / get / take / general prompt
+        response_text = f"🤖 **Red Can Autonomous Pick AI Triggered**\n1. Tracking Red Can 3D position\n2. Navigating mobile base & lowering arm joints\n3. Clamping with gripper & dumping into Recycle Bin"
         suggested_params = {"action": "pick", "target_object": "red_can"}
 
     return {
@@ -173,8 +175,6 @@ async def process_copilot_prompt(payload: Dict[str, Any]):
         "action_type": action_type,
         "params": suggested_params,
     }
-
-
 
 
 @app.post("/api/export")
@@ -260,17 +260,14 @@ async def websocket_endpoint(websocket: WebSocket):
     try:
         step = 0
         while True:
-            # Handle incoming commands from client
             try:
                 data = await asyncio.wait_for(websocket.receive_text(), timeout=0.03)
                 payload = json.loads(data)
-                # Client message handled here if needed
             except asyncio.TimeoutError:
                 pass
             except Exception:
                 pass
 
-            # Broadcast 60Hz physics telemetry tick
             step += 1
             telemetry = {
                 "type": "telemetry",
@@ -299,9 +296,6 @@ async def root():
     return HTMLResponse("<h1>Physical AI Studio Server Running</h1>")
 
 
-import socket
-import threading
-
 def find_available_port(host: str = "127.0.0.1", start_port: int = 8000) -> int:
     port = start_port
     while port < start_port + 100:
@@ -310,6 +304,7 @@ def find_available_port(host: str = "127.0.0.1", start_port: int = 8000) -> int:
                 return port
             port += 1
     return start_port
+
 
 def launch_studio():
     host = "127.0.0.1"
@@ -326,4 +321,3 @@ def launch_studio():
 
 if __name__ == "__main__":
     launch_studio()
-

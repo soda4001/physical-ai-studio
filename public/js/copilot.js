@@ -1,5 +1,5 @@
 /**
- * Physical AI Studio - Natural Language Copilot Handler with 3D Animation Trigger
+ * Physical AI Studio - Global English & Multilingual Copilot Handler
  */
 
 class PhysicalCopilot {
@@ -31,12 +31,14 @@ class PhysicalCopilot {
                 const data = await res.json();
                 this.appendMessage('assistant', data.reply.replace(/\n/g, '<br>'));
 
-                // Robust 3D Animation Trigger Logic
+                // Robust 3D Animation Trigger (English & Korean)
                 const vp = this.viewport || window.viewport;
+                const lowerText = text.toLowerCase();
+
                 if (vp) {
-                    if (text.includes('파란') || text.includes('병') || text.includes('blue')) {
+                    if (lowerText.includes('blue') || lowerText.includes('bottle') || text.includes('파란') || text.includes('병')) {
                         vp.startPickSequence('blue_bottle');
-                    } else if (text.includes('공') || text.includes('차') || text.includes('kick')) {
+                    } else if (lowerText.includes('kick') || lowerText.includes('ball') || lowerText.includes('soccer') || text.includes('공') || text.includes('차')) {
                         vp.startKickSequence();
                     } else {
                         // Default pick red_can for any pick/item/can prompt
@@ -44,7 +46,7 @@ class PhysicalCopilot {
                     }
                 }
             } catch (err) {
-                this.appendMessage('assistant', '⚠️ Physical AI Copilot 서버와 통신할 수 없습니다.');
+                this.appendMessage('assistant', '⚠️ Cannot connect to Physical AI Copilot server.');
             }
         });
     }

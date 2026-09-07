@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -33,22 +33,22 @@
             <div class="scene-selector-wrapper">
                 <i class="fa-solid fa-cubes-stacked icon"></i>
                 <select id="sceneSelect" class="scene-select">
-                    <option value="trash_picker">🧹 1. 이동형 스마트 쓰레기 픽업 로봇</option>
-                    <option value="humanoid_kick">⚽ 2. 휴머노이드 로봇 축구 & 보행</option>
-                    <option value="sander_care">💅 3. 안전 샌딩형 케어 디바이스</option>
+                    <option value="trash_picker">🧹 1. Mobile Smart Trash Picker Robot</option>
+                    <option value="humanoid_kick">⚽ 2. Humanoid Bipedal Soccer Robot</option>
+                    <option value="sander_care">💅 3. Precision Safety Care Sander Device</option>
                 </select>
             </div>
 
             <div class="physics-controls">
-                <button id="btnPlay" class="btn-icon btn-play" title="시뮬레이션 재생 (Space)"><i class="fa-solid fa-play"></i></button>
-                <button id="btnPause" class="btn-icon btn-pause" title="일시정지"><i class="fa-solid fa-pause"></i></button>
-                <button id="btnReset" class="btn-icon btn-reset" title="씬 리셋 (R)"><i class="fa-solid fa-rotate-left"></i></button>
+                <button id="btnPlay" class="btn-icon btn-play" title="Play Simulation (Space)"><i class="fa-solid fa-play"></i></button>
+                <button id="btnPause" class="btn-icon btn-pause" title="Pause Simulation"><i class="fa-solid fa-pause"></i></button>
+                <button id="btnReset" class="btn-icon btn-reset" title="Reset Scene (R)"><i class="fa-solid fa-rotate-left"></i></button>
             </div>
         </div>
 
         <div class="header-actions">
-            <button id="btnConnectHW" class="btn btn-secondary"><i class="fa-solid fa-plug"></i> 실물 로봇 연결</button>
-            <button id="btnExport" class="btn btn-primary"><i class="fa-solid fa-code"></i> 코드 익스포트</button>
+            <button id="btnConnectHW" class="btn btn-secondary"><i class="fa-solid fa-plug"></i> Connect Hardware</button>
+            <button id="btnExport" class="btn btn-primary"><i class="fa-solid fa-code"></i> Export Code</button>
         </div>
     </header>
 
@@ -59,16 +59,16 @@
         <aside class="sidebar left-sidebar">
             <!-- Tab Navigation -->
             <div class="sidebar-tabs">
-                <button class="tab-btn active" data-tab="policiesTab"><i class="fa-solid fa-brain"></i> AI 정책 카드</button>
-                <button class="tab-btn" data-tab="jointsTab"><i class="fa-solid fa-sliders"></i> 관절 제어</button>
-                <button class="tab-btn" data-tab="objectsTab"><i class="fa-solid fa-box-open"></i> 3D 오브젝트</button>
+                <button class="tab-btn active" data-tab="policiesTab"><i class="fa-solid fa-brain"></i> AI Policies</button>
+                <button class="tab-btn" data-tab="jointsTab"><i class="fa-solid fa-sliders"></i> Joint Control</button>
+                <button class="tab-btn" data-tab="objectsTab"><i class="fa-solid fa-box-open"></i> 3D Objects</button>
             </div>
 
             <!-- Tab Content 1: Policy Cards -->
             <div id="policiesTab" class="tab-content active">
                 <div class="section-title">
-                    <span>초보자용 AI 동작 카드</span>
-                    <span class="badge">클릭으로 실행</span>
+                    <span>Visual AI Action Cards</span>
+                    <span class="badge">Click to Run</span>
                 </div>
                 <div id="policyCardList" class="policy-card-list">
                     <!-- Policy Cards dynamically inserted here -->
@@ -78,7 +78,7 @@
             <!-- Tab Content 2: Joint Control -->
             <div id="jointsTab" class="tab-content">
                 <div class="section-title">
-                    <span>로봇 관절(Joint) 수동 조작</span>
+                    <span>Manual Joint Control</span>
                     <button id="btnHomePose" class="btn-xs"><i class="fa-solid fa-house"></i> Home</button>
                 </div>
                 <div id="jointSliderList" class="joint-slider-list">
@@ -89,13 +89,13 @@
             <!-- Tab Content 3: 3D Objects -->
             <div id="objectsTab" class="tab-content">
                 <div class="section-title">
-                    <span>3D 오브젝트 스폰</span>
+                    <span>Spawn 3D Objects</span>
                 </div>
                 <div class="object-grid">
-                    <button class="btn-obj-spawn" data-obj="trash_can"><i class="fa-solid fa-trash-can"></i> 쓰레기 캔</button>
-                    <button class="btn-obj-spawn" data-obj="bottle"><i class="fa-solid fa-bottle-water"></i> 페트병</button>
-                    <button class="btn-obj-spawn" data-obj="ball"><i class="fa-solid fa-futbol"></i> 축구 공</button>
-                    <button class="btn-obj-spawn" data-obj="bin"><i class="fa-solid fa-box-archive"></i> 수거함</button>
+                    <button class="btn-obj-spawn" data-obj="trash_can"><i class="fa-solid fa-trash-can"></i> Red Can</button>
+                    <button class="btn-obj-spawn" data-obj="bottle"><i class="fa-solid fa-bottle-water"></i> Blue Bottle</button>
+                    <button class="btn-obj-spawn" data-obj="ball"><i class="fa-solid fa-futbol"></i> Soccer Ball</button>
+                    <button class="btn-obj-spawn" data-obj="bin"><i class="fa-solid fa-box-archive"></i> Recycle Bin</button>
                 </div>
             </div>
         </aside>
@@ -113,8 +113,8 @@
                 </div>
 
                 <div class="viewport-overlay top-right">
-                    <button id="btnResetCam" class="btn-overlay" title="카메라 리셋"><i class="fa-solid fa-video"></i></button>
-                    <button id="btnToggleVision" class="btn-overlay" title="AI 비전 카메라 시점"><i class="fa-solid fa-eye"></i></button>
+                    <button id="btnResetCam" class="btn-overlay" title="Reset Camera"><i class="fa-solid fa-video"></i></button>
+                    <button id="btnToggleVision" class="btn-overlay" title="Toggle AI Vision Feed"><i class="fa-solid fa-eye"></i></button>
                 </div>
 
                 <!-- Vision PIP Camera Feed Window (Hidden by default) -->
@@ -126,7 +126,7 @@
                     <div class="pip-view">
                         <canvas id="pipCanvas" width="200" height="150"></canvas>
                         <div class="yolo-bbox-overlay">
-                            <span class="yolo-tag">Can (98%)</span>
+                            <span class="yolo-tag">Red Can (98%)</span>
                         </div>
                     </div>
                 </div>
@@ -135,8 +135,8 @@
             <!-- Bottom Teleoperation Panel -->
             <div class="teleop-panel">
                 <div class="teleop-title">
-                    <span><i class="fa-solid fa-gamepad"></i> 수동 조종 (Teleoperation)</span>
-                    <span class="key-hint">단축키: WASD (이동) | Arrow Keys (로봇팔)</span>
+                    <span><i class="fa-solid fa-gamepad"></i> Manual Teleoperation</span>
+                    <span class="key-hint">Shortcuts: WASD (Base) | Arrow Keys (Robotic Arm)</span>
                 </div>
                 <div class="teleop-controls">
                     <div class="dpad">
@@ -148,8 +148,8 @@
                     </div>
 
                     <div class="teleop-gripper">
-                        <button id="btnGripOpen" class="btn-action"><i class="fa-solid fa-hand"></i> 집게 열기</button>
-                        <button id="btnGripClose" class="btn-action active"><i class="fa-solid fa-hand-back-fist"></i> 집게 닫기</button>
+                        <button id="btnGripOpen" class="btn-action"><i class="fa-solid fa-hand"></i> Open Gripper</button>
+                        <button id="btnGripClose" class="btn-action active"><i class="fa-solid fa-hand-back-fist"></i> Close Gripper</button>
                     </div>
                 </div>
             </div>
@@ -159,8 +159,8 @@
         <aside class="sidebar right-sidebar">
             <div class="sidebar-tabs">
                 <button class="tab-btn active" data-tab="copilotTab"><i class="fa-solid fa-wand-magic-sparkles"></i> AI Copilot</button>
-                <button class="tab-btn" data-tab="codeTab"><i class="fa-solid fa-code"></i> 파이썬 코드</button>
-                <button class="tab-btn" data-tab="logTab"><i class="fa-solid fa-terminal"></i> 텔레메트리</button>
+                <button class="tab-btn" data-tab="codeTab"><i class="fa-solid fa-code"></i> Python Code</button>
+                <button class="tab-btn" data-tab="logTab"><i class="fa-solid fa-terminal"></i> Telemetry</button>
             </div>
 
             <!-- Tab Content 1: Physical AI Copilot Chat -->
@@ -170,15 +170,15 @@
                         <div class="chat-message assistant">
                             <div class="avatar"><i class="fa-solid fa-robot"></i></div>
                             <div class="bubble">
-                                안녕하세요! <strong>Physical AI Copilot</strong>입니다.<br>
-                                복잡한 코딩 없이 말로 로봇 동작을 지시해 보세요!<br><br>
-                                💡 <em>예시: "로봇을 빨간 캔 앞으로 이동해서 집게로 집어줘"</em>
+                                Welcome to <strong>Physical AI Copilot</strong>!<br>
+                                Instruct robot actions in natural language without writing code.<br><br>
+                                💡 <em>Try: "Pick up the red can and dump it in the recycle bin"</em>
                             </div>
                         </div>
                     </div>
 
                     <form id="copilotForm" class="copilot-input-area">
-                        <input type="text" id="copilotInput" placeholder="자연어로 피지컬 AI 동작을 지시하세요..." autocomplete="off">
+                        <input type="text" id="copilotInput" placeholder="Instruct Physical AI robot actions..." autocomplete="off">
                         <button type="submit" class="btn-send"><i class="fa-solid fa-paper-plane"></i></button>
                     </form>
                 </div>
@@ -187,8 +187,8 @@
             <!-- Tab Content 2: Python Code Preview -->
             <div id="codeTab" class="tab-content">
                 <div class="section-title">
-                    <span>자동 생성된 파이썬 제어 스크립트</span>
-                    <button id="btnCopyCode" class="btn-xs"><i class="fa-regular fa-copy"></i> 복사</button>
+                    <span>Generated Control Script</span>
+                    <button id="btnCopyCode" class="btn-xs"><i class="fa-regular fa-copy"></i> Copy</button>
                 </div>
                 <div class="code-editor-container">
                     <pre><code id="codePreview" class="language-python"># Physical AI Controller Script
@@ -206,8 +206,8 @@ if __name__ == "__main__":
             <!-- Tab Content 3: Real-Time Telemetry Log -->
             <div id="logTab" class="tab-content">
                 <div class="section-title">
-                    <span>실시간 물리 센서 로그</span>
-                    <button id="btnClearLog" class="btn-xs">지우기</button>
+                    <span>Physical Sensor Log</span>
+                    <button id="btnClearLog" class="btn-xs">Clear</button>
                 </div>
                 <div id="telemetryLog" class="telemetry-log">
                     <div class="log-line info">[System] Physical AI Studio Workspace initialized.</div>
@@ -222,30 +222,30 @@ if __name__ == "__main__":
     <div id="exportModal" class="modal-backdrop hidden">
         <div class="modal-content">
             <div class="modal-header">
-                <h3><i class="fa-solid fa-file-code"></i> 실물 로봇 제어 코드 익스포트</h3>
+                <h3><i class="fa-solid fa-file-code"></i> Export Real Robot Control Code</h3>
                 <button class="btn-modal-close" id="btnCloseModal">&times;</button>
             </div>
             <div class="modal-body">
-                <p>현재 3D 시뮬레이션에서 검증된 로봇 포즈와 AI 정책을 실물 하드웨어용 코드로 내보냅니다.</p>
+                <p>Export verified 3D simulation poses and AI policies to target hardware code.</p>
                 <div class="export-options">
                     <label><input type="radio" name="exportFormat" value="python" checked> Python Script (`uv run control.py`)</label>
                     <label><input type="radio" name="exportFormat" value="ros2"> ROS2 Node (C++ / Python)</label>
-                    <label><input type="radio" name="exportFormat" value="arduino"> Arduino / ESP32 C++ Sketch</label>
+                    <label><input type="radio" name="exportFormat" value="arduino"> Arduino / ESP32 Sketch</label>
                 </div>
                 <div class="code-export-preview">
                     <textarea id="exportCodeText" readonly rows="12"></textarea>
                 </div>
             </div>
             <div class="modal-footer">
-                <button id="btnDownloadCode" class="btn btn-primary"><i class="fa-solid fa-download"></i> .py 파일 다운로드</button>
+                <button id="btnDownloadCode" class="btn btn-primary"><i class="fa-solid fa-download"></i> Download .py Script</button>
             </div>
         </div>
     </div>
 
     <!-- Scripts -->
-    <script src="/static/js/viewport.js?v=1.0.8"></script>
-    <script src="/static/js/policy_cards.js?v=1.0.8"></script>
-    <script src="/static/js/copilot.js?v=1.0.8"></script>
-    <script src="/static/js/app.js?v=1.0.8"></script>
+    <script src="/static/js/viewport.js?v=1.1.0"></script>
+    <script src="/static/js/policy_cards.js?v=1.1.0"></script>
+    <script src="/static/js/copilot.js?v=1.1.0"></script>
+    <script src="/static/js/app.js?v=1.1.0"></script>
 </body>
 </html>
