@@ -152,9 +152,22 @@ async def process_copilot_prompt(payload: Dict[str, Any]):
     action_type = "autonomous_pick"
     suggested_params = {}
 
+    target_obj = "red_can"
     if "blue" in prompt_lower or "bottle" in prompt_lower or "파란" in prompt or "병" in prompt:
-        response_text = "🤖 **Blue Bottle Autonomous Pick AI Triggered**\n1. Tracking Blue Bottle 3D position\n2. Navigating mobile base & lowering arm joints\n3. Clamping with gripper & dumping into Recycle Bin"
-        suggested_params = {"action": "pick", "target_object": "blue_bottle"}
+        target_obj = "blue_bottle"
+
+    is_dump = "dump" in prompt_lower or "recycle" in prompt_lower or "bin" in prompt_lower or "버려" in prompt or "쓰레기통" in prompt
+    is_pick = "pick" in prompt_lower or "get" in prompt_lower or "take" in prompt_lower or "grab" in prompt or "집" in prompt or "잡" in prompt
+
+    if is_pick and is_dump:
+        action_type = "pick_and_dump"
+        obj_name = "Blue Bottle" if target_obj == "blue_bottle" else "Red Can"
+        response_text = f"🤖 **{obj_name} Pick & Dump AI Triggered**\n1. Tracking {obj_name} 3D position\n2. Navigating mobile base & clamping with gripper\n3. Transporting & dumping into Recycle Bin"
+        suggested_params = {"action": "pick_and_dump", "target_object": target_obj}
+    elif is_dump and not is_pick:
+        action_type = "dump_only"
+        response_text = "🗑️ **Recycle Bin Dump AI Triggered**\n1. Navigating mobile base to Recycle Bin\n2. Extending arm joints & dropping held item into bin"
+        suggested_params = {"action": "dump_only", "target_object": "bin"}
     elif "kick" in prompt_lower or "ball" in prompt_lower or "soccer" in prompt_lower or "공" in prompt or "차" in prompt:
         action_type = "autonomous_kick"
         response_text = "⚽ **Soccer Ball Kick AI Triggered**\n1. Tracking ball 3D position\n2. Aligning shooting posture & executing leg kick trajectory"
@@ -164,9 +177,11 @@ async def process_copilot_prompt(payload: Dict[str, Any]):
         response_text = "🚶 **Bipedal Walk & Motion Trajectory Triggered**\n1. Adjusting step height & stride frequency"
         suggested_params = {"action": "walk", "target_object": "forward"}
     else:
-        # Default for red can / pick / get / take / general prompt
-        response_text = f"🤖 **Red Can Autonomous Pick AI Triggered**\n1. Tracking Red Can 3D position\n2. Navigating mobile base & lowering arm joints\n3. Clamping with gripper & dumping into Recycle Bin"
-        suggested_params = {"action": "pick", "target_object": "red_can"}
+        # Default: Pick Only (holding object in gripper without dumping)
+        action_type = "pick_only"
+        obj_name = "Blue Bottle" if target_obj == "blue_bottle" else "Red Can"
+        response_text = f"🤖 **{obj_name} Pick AI Triggered**\n1. Tracking {obj_name} 3D position\n2. Navigating mobile base & lowering arm joints in 'ㄱ' shape\n3. Clamping with gripper & holding object in position"
+        suggested_params = {"action": "pick_only", "target_object": target_obj}
 
     return {
         "status": "success",

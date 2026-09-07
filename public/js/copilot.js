@@ -36,13 +36,19 @@ class PhysicalCopilot {
                 const lowerText = text.toLowerCase();
 
                 if (vp) {
-                    if (lowerText.includes('blue') || lowerText.includes('bottle') || text.includes('파란') || text.includes('병')) {
-                        vp.startPickSequence('blue_bottle');
-                    } else if (lowerText.includes('kick') || lowerText.includes('ball') || lowerText.includes('soccer') || text.includes('공') || text.includes('차')) {
+                    const params = data.params || {};
+                    const action = params.action || 'pick_only';
+                    const targetObj = params.target_object || 'red_can';
+
+                    if (action === 'pick_and_dump') {
+                        vp.startPickAndDumpSequence(targetObj);
+                    } else if (action === 'dump_only') {
+                        vp.startDumpOnlySequence();
+                    } else if (action === 'kick') {
                         vp.startKickSequence();
                     } else {
-                        // Default pick red_can for any pick/item/can prompt
-                        vp.startPickSequence('red_can');
+                        // Default: Pick only (holds target object in gripper without dumping)
+                        vp.startPickOnlySequence(targetObj);
                     }
                 }
             } catch (err) {

@@ -462,8 +462,8 @@ class PhysicsViewport {
         this.armJoints = [spindle];
     }
 
-    // 🤖 "ㄱ" L-Shaped Articulated Robot Arm Sequence
-    startPickSequence(objKey = 'red_can') {
+    // Helper to resolve 3D target object
+    resolveTargetObject(objKey) {
         let targetObj = this.spawnedObjects[objKey];
 
         if (!targetObj) {
@@ -483,18 +483,85 @@ class PhysicsViewport {
             this.spawnTrashPickerEnvironment();
             targetObj = this.spawnedObjects['red_can'];
         }
+        return targetObj;
+    }
 
+    // 🦾 1. Pick Only Sequence (집기 전용: 타겟 물체를 집어 들어 올리고 서 있음)
+    startPickOnlySequence(objKey = 'red_can') {
+        const targetObj = this.resolveTargetObject(objKey);
         const targetPos = targetObj.position.clone();
-        const binObj = this.spawnedObjects['bin'];
-        const binPos = binObj ? binObj.position.clone() : new THREE.Vector3(1.5, 0.15, 0.6);
 
-        // Highlight Target Object with Neon Ring Detection Marker
         if (this.targetMarker) {
             this.targetMarker.position.set(targetPos.x, 0.01, targetPos.z);
             this.targetMarker.material.opacity = 0.9;
         }
 
-        // Exact base reach distance = 0.504m for "ㄱ" L-shape elbow reach to target position
+        const driveTarget = new THREE.Vector3(targetPos.x - 0.504, 0, targetPos.z);
+
+        this.animState = {
+            active: true,
+            targetObjKey: objKey,
+            targetObj: targetObj,
+            currentStep: 0,
+            progress: 0,
+            heldObject: null,
+            sequence: [
+                { type: 'drive_to', target: driveTarget, duration: 2.0 },
+                { type: 'grip_open', duration: 0.5 },
+                { type: 'lower_arm_L_shape', shoulder: -1.05, elbow: -2.02, duration: 1.8 },
+                { type: 'grip_close_center', duration: 0.8 },
+                { type: 'lift_arm', shoulder: -0.40, elbow: -1.20, duration: 1.6 }
+            ]
+        };
+
+        const statusEl = document.getElementById('simStatusText');
+        if (statusEl) statusEl.textContent = 'HOLDING OBJECT';
+
+        if (window.appLog) {
+            window.appLog(`[Kinematics AI] 🦾 Robot Arm Picked Target Object & Holding in Claws!`, 'success');
+        }
+    }
+
+    // 🗑️ 2. Dump Only Sequence (버리기 전용: 들고 있는 물체를 수거함에 버림)
+    startDumpOnlySequence() {
+        const binObj = this.spawnedObjects['bin'];
+        const binPos = binObj ? binObj.position.clone() : new THREE.Vector3(1.5, 0.15, 0.6);
+        const binDriveTarget = new THREE.Vector3(binPos.x - 0.504, 0, binPos.z);
+
+        this.animState = {
+            active: true,
+            binPos: binPos,
+            currentStep: 0,
+            progress: 0,
+            heldObject: this.animState.heldObject,
+            sequence: [
+                { type: 'drive_to_bin', target: binDriveTarget, duration: 2.5 },
+                { type: 'dump_arm', shoulder: -0.80, elbow: -1.50, duration: 1.4 },
+                { type: 'grip_open_drop', duration: 0.8 },
+                { type: 'home_arm', shoulder: 0.0, elbow: 0.0, duration: 1.2 }
+            ]
+        };
+
+        const statusEl = document.getElementById('simStatusText');
+        if (statusEl) statusEl.textContent = 'DUMPING INTO BIN';
+
+        if (window.appLog) {
+            window.appLog(`[Kinematics AI] 🗑️ Transporting & Dumping Object into Recycle Bin`, 'success');
+        }
+    }
+
+    // 🦾🗑️ 3. Full Pick & Dump Sequence (집어서 쓰레기통에 버리기)
+    startPickAndDumpSequence(objKey = 'red_can') {
+        const targetObj = this.resolveTargetObject(objKey);
+        const targetPos = targetObj.position.clone();
+        const binObj = this.spawnedObjects['bin'];
+        const binPos = binObj ? binObj.position.clone() : new THREE.Vector3(1.5, 0.15, 0.6);
+
+        if (this.targetMarker) {
+            this.targetMarker.position.set(targetPos.x, 0.01, targetPos.z);
+            this.targetMarker.material.opacity = 0.9;
+        }
+
         const driveTarget = new THREE.Vector3(targetPos.x - 0.504, 0, targetPos.z);
         const binDriveTarget = new THREE.Vector3(binPos.x - 0.504, 0, binPos.z);
 
@@ -507,23 +574,14 @@ class PhysicsViewport {
             progress: 0,
             heldObject: null,
             sequence: [
-                // 1. Drive base to target position (2.0s)
                 { type: 'drive_to', target: driveTarget, duration: 2.0 },
-                // 2. Open Gripper Fingers wide (0.08m)
                 { type: 'grip_open', duration: 0.5 },
-                // 3. Form precise "ㄱ" L-Shape Bend down to ground level (y=0.08m): Shoulder -1.05rad (-60°), Elbow -2.02rad (-116°)
                 { type: 'lower_arm_L_shape', shoulder: -1.05, elbow: -2.02, duration: 1.8 },
-                // 4. Gripper Fingers Squeeze & Clamp Object directly between finger pads!
                 { type: 'grip_close_center', duration: 0.8 },
-                // 5. Lift Arm UP carrying target object: Shoulder -0.40rad, Elbow -1.20rad
                 { type: 'lift_arm', shoulder: -0.40, elbow: -1.20, duration: 1.6 },
-                // 6. Drive Robot Base to Recycle Bin (2.5s)
                 { type: 'drive_to_bin', target: binDriveTarget, duration: 2.5 },
-                // 7. Extend Arm over Bin: Shoulder -0.80rad, Elbow -1.50rad
                 { type: 'dump_arm', shoulder: -0.80, elbow: -1.50, duration: 1.4 },
-                // 8. Open Gripper to Drop Object inside Bin
                 { type: 'grip_open_drop', duration: 0.8 },
-                // 9. Return Arm Joints to Home Position (Shoulder 0, Elbow 0)
                 { type: 'home_arm', shoulder: 0.0, elbow: 0.0, duration: 1.2 }
             ]
         };
@@ -532,8 +590,12 @@ class PhysicsViewport {
         if (statusEl) statusEl.textContent = 'RUNNING AI POLICY';
 
         if (window.appLog) {
-            window.appLog(`[Kinematics AI] 🦾 Robot Arm Forming 'ㄱ' L-Shape to Pick Target Object...`, 'success');
+            window.appLog(`[Kinematics AI] 🦾 Robot Executing Complete Pick & Dump Task`, 'success');
         }
+    }
+
+    startPickSequence(objKey = 'red_can') {
+        this.startPickOnlySequence(objKey);
     }
 
     startKickSequence() {
