@@ -496,7 +496,7 @@ class PhysicsViewport {
             this.targetMarker.material.opacity = 0.9;
         }
 
-        const driveTarget = new THREE.Vector3(targetPos.x - 0.504, 0, targetPos.z);
+        const driveTarget = new THREE.Vector3(targetPos.x - 0.500, 0, targetPos.z);
 
         this.animState = {
             active: true,
@@ -508,7 +508,8 @@ class PhysicsViewport {
             sequence: [
                 { type: 'drive_to', target: driveTarget, duration: 2.0 },
                 { type: 'grip_open', duration: 0.5 },
-                { type: 'lower_arm_L_shape', shoulder: -1.05, elbow: -2.02, duration: 1.8 },
+                // Form precise zero-clipping "ㄱ" L-shape (Shoulder -50°, Elbow -120°): Claw tips sit 2cm above floor!
+                { type: 'lower_arm_L_shape', shoulder: -0.87, elbow: -2.09, duration: 1.8 },
                 { type: 'grip_close_center', duration: 0.8 },
                 { type: 'lift_arm', shoulder: -0.40, elbow: -1.20, duration: 1.6 }
             ]
@@ -518,7 +519,7 @@ class PhysicsViewport {
         if (statusEl) statusEl.textContent = 'HOLDING OBJECT';
 
         if (window.appLog) {
-            window.appLog(`[Kinematics AI] 🦾 Robot Arm Picked Target Object & Holding in Claws!`, 'success');
+            window.appLog(`[Kinematics AI] 🦾 Robot Arm Clamped Target Object & Holding in Claws!`, 'success');
         }
     }
 
@@ -526,7 +527,7 @@ class PhysicsViewport {
     startDumpOnlySequence() {
         const binObj = this.spawnedObjects['bin'];
         const binPos = binObj ? binObj.position.clone() : new THREE.Vector3(1.5, 0.15, 0.6);
-        const binDriveTarget = new THREE.Vector3(binPos.x - 0.504, 0, binPos.z);
+        const binDriveTarget = new THREE.Vector3(binPos.x - 0.500, 0, binPos.z);
 
         this.animState = {
             active: true,
@@ -562,8 +563,8 @@ class PhysicsViewport {
             this.targetMarker.material.opacity = 0.9;
         }
 
-        const driveTarget = new THREE.Vector3(targetPos.x - 0.504, 0, targetPos.z);
-        const binDriveTarget = new THREE.Vector3(binPos.x - 0.504, 0, binPos.z);
+        const driveTarget = new THREE.Vector3(targetPos.x - 0.500, 0, targetPos.z);
+        const binDriveTarget = new THREE.Vector3(binPos.x - 0.500, 0, binPos.z);
 
         this.animState = {
             active: true,
@@ -576,7 +577,7 @@ class PhysicsViewport {
             sequence: [
                 { type: 'drive_to', target: driveTarget, duration: 2.0 },
                 { type: 'grip_open', duration: 0.5 },
-                { type: 'lower_arm_L_shape', shoulder: -1.05, elbow: -2.02, duration: 1.8 },
+                { type: 'lower_arm_L_shape', shoulder: -0.87, elbow: -2.09, duration: 1.8 },
                 { type: 'grip_close_center', duration: 0.8 },
                 { type: 'lift_arm', shoulder: -0.40, elbow: -1.20, duration: 1.6 },
                 { type: 'drive_to_bin', target: binDriveTarget, duration: 2.5 },
@@ -752,7 +753,7 @@ class PhysicsViewport {
             if (state.targetObj && !state.heldObject) {
                 // Attach object to Gripper Tip & Center it EXACTLY between the finger pads!
                 this.gripperGroup.add(state.targetObj);
-                state.targetObj.position.set(0, 0.10, 0); // Position inside claw opening
+                state.targetObj.position.set(0, 0.115, 0); // Position snugly between finger pads
                 state.targetObj.rotation.set(0, 0, 0);
                 state.heldObject = state.targetObj;
             }
