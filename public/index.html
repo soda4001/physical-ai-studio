@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Physical AI Studio - Easy Physical AI DevTool for Beginners</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="/static/css/style.css">
+    <!-- Three.js & OrbitControls -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+</head>
+<body class="dark-theme">
+
+    <!-- Top Navigation Header -->
+    <header class="app-header">
+        <div class="logo-area">
+            <div class="logo-icon"><i class="fa-solid fa-robot"></i></div>
+            <div class="logo-text">
+                <span class="brand">Physical AI</span>
+                <span class="sub">Studio</span>
+            </div>
+            <span class="version-tag">v0.1.0 MVP</span>
+        </div>
+
+        <div class="header-center">
+            <div class="scene-selector-wrapper">
+                <i class="fa-solid fa-cubes-stacked icon"></i>
+                <select id="sceneSelect" class="scene-select">
+                    <option value="trash_picker">🧹 1. 이동형 스마트 쓰레기 픽업 로봇</option>
+                    <option value="humanoid_kick">⚽ 2. 휴머노이드 로봇 축구 & 보행</option>
+                    <option value="sander_care">💅 3. 안전 샌딩형 케어 디바이스</option>
+                </select>
+            </div>
+
+            <div class="physics-controls">
+                <button id="btnPlay" class="btn-icon btn-play" title="시뮬레이션 재생 (Space)"><i class="fa-solid fa-play"></i></button>
+                <button id="btnPause" class="btn-icon btn-pause" title="일시정지"><i class="fa-solid fa-pause"></i></button>
+                <button id="btnReset" class="btn-icon btn-reset" title="씬 리셋 (R)"><i class="fa-solid fa-rotate-left"></i></button>
+            </div>
+        </div>
+
+        <div class="header-actions">
+            <button id="btnConnectHW" class="btn btn-secondary"><i class="fa-solid fa-plug"></i> 실물 로봇 연결</button>
+            <button id="btnExport" class="btn btn-primary"><i class="fa-solid fa-code"></i> 코드 익스포트</button>
+        </div>
+    </header>
+
+    <!-- Main Workspace Studio Layout -->
+    <main class="studio-workspace">
+        
+        <!-- Left Sidebar: AI Policy & Object Configurator -->
+        <aside class="sidebar left-sidebar">
+            <!-- Tab Navigation -->
+            <div class="sidebar-tabs">
+                <button class="tab-btn active" data-tab="policiesTab"><i class="fa-solid fa-brain"></i> AI 정책 카드</button>
+                <button class="tab-btn" data-tab="jointsTab"><i class="fa-solid fa-sliders"></i> 관절 제어</button>
+                <button class="tab-btn" data-tab="objectsTab"><i class="fa-solid fa-box-open"></i> 3D 오브젝트</button>
+            </div>
+
+            <!-- Tab Content 1: Policy Cards -->
+            <div id="policiesTab" class="tab-content active">
+                <div class="section-title">
+                    <span>초보자용 AI 동작 카드</span>
+                    <span class="badge">클릭으로 실행</span>
+                </div>
+                <div id="policyCardList" class="policy-card-list">
+                    <!-- Policy Cards dynamically inserted here -->
+                </div>
+            </div>
+
+            <!-- Tab Content 2: Joint Control -->
+            <div id="jointsTab" class="tab-content">
+                <div class="section-title">
+                    <span>로봇 관절(Joint) 수동 조작</span>
+                    <button id="btnHomePose" class="btn-xs"><i class="fa-solid fa-house"></i> Home</button>
+                </div>
+                <div id="jointSliderList" class="joint-slider-list">
+                    <!-- Joint sliders dynamically created -->
+                </div>
+            </div>
+
+            <!-- Tab Content 3: 3D Objects -->
+            <div id="objectsTab" class="tab-content">
+                <div class="section-title">
+                    <span>3D 오브젝트 스폰</span>
+                </div>
+                <div class="object-grid">
+                    <button class="btn-obj-spawn" data-obj="trash_can"><i class="fa-solid fa-trash-can"></i> 쓰레기 캔</button>
+                    <button class="btn-obj-spawn" data-obj="bottle"><i class="fa-solid fa-bottle-water"></i> 페트병</button>
+                    <button class="btn-obj-spawn" data-obj="ball"><i class="fa-solid fa-futbol"></i> 축구 공</button>
+                    <button class="btn-obj-spawn" data-obj="bin"><i class="fa-solid fa-box-archive"></i> 수거함</button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Center Area: 3D Physics Viewport & Teleop Controls -->
+        <section class="center-area">
+            <div class="viewport-wrapper">
+                <!-- Three.js Canvas Container -->
+                <div id="canvasContainer" class="canvas-container"></div>
+
+                <!-- Viewport Overlay Badges -->
+                <div class="viewport-overlay top-left">
+                    <div class="status-badge"><span class="pulse-dot"></span> <span id="simStatusText">PHYSICS RUNNING</span></div>
+                    <div class="fps-badge"><i class="fa-solid fa-gauge-high"></i> <span id="fpsCounter">60 FPS</span></div>
+                </div>
+
+                <div class="viewport-overlay top-right">
+                    <button id="btnResetCam" class="btn-overlay" title="카메라 리셋"><i class="fa-solid fa-video"></i></button>
+                    <button id="btnToggleVision" class="btn-overlay" title="AI 비전 카메라 시점"><i class="fa-solid fa-eye"></i></button>
+                </div>
+
+                <!-- Vision PIP Camera Feed Window (Hidden by default) -->
+                <div id="visionPipWindow" class="vision-pip hidden">
+                    <div class="pip-header">
+                        <span><i class="fa-solid fa-camera"></i> Robot RGB-D Camera Feed</span>
+                        <button id="btnClosePip" class="btn-xs-close">&times;</button>
+                    </div>
+                    <div class="pip-view">
+                        <canvas id="pipCanvas" width="200" height="150"></canvas>
+                        <div class="yolo-bbox-overlay">
+                            <span class="yolo-tag">Can (98%)</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bottom Teleoperation Panel -->
+            <div class="teleop-panel">
+                <div class="teleop-title">
+                    <span><i class="fa-solid fa-gamepad"></i> 수동 조종 (Teleoperation)</span>
+                    <span class="key-hint">단축키: WASD (이동) | Arrow Keys (로봇팔)</span>
+                </div>
+                <div class="teleop-controls">
+                    <div class="dpad">
+                        <button class="btn-dpad up" id="keyForward"><i class="fa-solid fa-chevron-up"></i></button>
+                        <button class="btn-dpad left" id="keyLeft"><i class="fa-solid fa-chevron-left"></i></button>
+                        <button class="btn-dpad center" id="keyStop"><i class="fa-solid fa-circle-stop"></i></button>
+                        <button class="btn-dpad right" id="keyRight"><i class="fa-solid fa-chevron-right"></i></button>
+                        <button class="btn-dpad down" id="keyBackward"><i class="fa-solid fa-chevron-down"></i></button>
+                    </div>
+
+                    <div class="teleop-gripper">
+                        <button id="btnGripOpen" class="btn-action"><i class="fa-solid fa-hand"></i> 집게 열기</button>
+                        <button id="btnGripClose" class="btn-action active"><i class="fa-solid fa-hand-back-fist"></i> 집게 닫기</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Right Sidebar: Physical AI Copilot & Code Editor -->
+        <aside class="sidebar right-sidebar">
+            <div class="sidebar-tabs">
+                <button class="tab-btn active" data-tab="copilotTab"><i class="fa-solid fa-wand-magic-sparkles"></i> AI Copilot</button>
+                <button class="tab-btn" data-tab="codeTab"><i class="fa-solid fa-code"></i> 파이썬 코드</button>
+                <button class="tab-btn" data-tab="logTab"><i class="fa-solid fa-terminal"></i> 텔레메트리</button>
+            </div>
+
+            <!-- Tab Content 1: Physical AI Copilot Chat -->
+            <div id="copilotTab" class="tab-content active">
+                <div class="copilot-container">
+                    <div class="copilot-messages" id="copilotMessages">
+                        <div class="chat-message assistant">
+                            <div class="avatar"><i class="fa-solid fa-robot"></i></div>
+                            <div class="bubble">
+                                안녕하세요! <strong>Physical AI Copilot</strong>입니다.<br>
+                                복잡한 코딩 없이 말로 로봇 동작을 지시해 보세요!<br><br>
+                                💡 <em>예시: "로봇을 빨간 캔 앞으로 이동해서 집게로 집어줘"</em>
+                            </div>
+                        </div>
+                    </div>
+
+                    <form id="copilotForm" class="copilot-input-area">
+                        <input type="text" id="copilotInput" placeholder="자연어로 피지컬 AI 동작을 지시하세요..." autocomplete="off">
+                        <button type="submit" class="btn-send"><i class="fa-solid fa-paper-plane"></i></button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Tab Content 2: Python Code Preview -->
+            <div id="codeTab" class="tab-content">
+                <div class="section-title">
+                    <span>자동 생성된 파이썬 제어 스크립트</span>
+                    <button id="btnCopyCode" class="btn-xs"><i class="fa-regular fa-copy"></i> 복사</button>
+                </div>
+                <div class="code-editor-container">
+                    <pre><code id="codePreview" class="language-python"># Physical AI Controller Script
+import math
+import time
+
+def main():
+    print("Physical AI Robot Initialized")
+    
+if __name__ == "__main__":
+    main()</code></pre>
+                </div>
+            </div>
+
+            <!-- Tab Content 3: Real-Time Telemetry Log -->
+            <div id="logTab" class="tab-content">
+                <div class="section-title">
+                    <span>실시간 물리 센서 로그</span>
+                    <button id="btnClearLog" class="btn-xs">지우기</button>
+                </div>
+                <div id="telemetryLog" class="telemetry-log">
+                    <div class="log-line info">[System] Physical AI Studio Workspace initialized.</div>
+                    <div class="log-line success">[WebSocket] Connected to local telemetry server on ws://127.0.0.1:8000/ws</div>
+                </div>
+            </div>
+        </aside>
+
+    </main>
+
+    <!-- Modal Dialog: Export Code -->
+    <div id="exportModal" class="modal-backdrop hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-file-code"></i> 실물 로봇 제어 코드 익스포트</h3>
+                <button class="btn-modal-close" id="btnCloseModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p>현재 3D 시뮬레이션에서 검증된 로봇 포즈와 AI 정책을 실물 하드웨어용 코드로 내보냅니다.</p>
+                <div class="export-options">
+                    <label><input type="radio" name="exportFormat" value="python" checked> Python Script (`uv run control.py`)</label>
+                    <label><input type="radio" name="exportFormat" value="ros2"> ROS2 Node (C++ / Python)</label>
+                    <label><input type="radio" name="exportFormat" value="arduino"> Arduino / ESP32 C++ Sketch</label>
+                </div>
+                <div class="code-export-preview">
+                    <textarea id="exportCodeText" readonly rows="12"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="btnDownloadCode" class="btn btn-primary"><i class="fa-solid fa-download"></i> .py 파일 다운로드</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="/static/js/viewport.js?v=1.0.8"></script>
+    <script src="/static/js/policy_cards.js?v=1.0.8"></script>
+    <script src="/static/js/copilot.js?v=1.0.8"></script>
+    <script src="/static/js/app.js?v=1.0.8"></script>
+</body>
+</html>
