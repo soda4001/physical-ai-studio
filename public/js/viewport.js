@@ -51,11 +51,12 @@ class PhysicsViewport {
         const height = this.container.clientHeight;
 
         this.scene = new THREE.Scene();
-        this.scene.background = new THREE.Color(0x090d16);
-        this.scene.fog = new THREE.FogExp2(0x090d16, 0.04);
+        this.scene.background = new THREE.Color(0x070a12);
+        this.scene.fog = new THREE.FogExp2(0x070a12, 0.035);
 
         this.camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 100);
-        this.camera.position.set(2.8, 2.2, 3.2);
+        // Dramatic, crisp camera angle focused on the robot arm & gripper
+        this.camera.position.set(1.7, 1.3, 1.9);
 
         this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
         this.renderer.setSize(width, height);
@@ -69,34 +70,42 @@ class PhysicsViewport {
         this.controls.enableDamping = true;
         this.controls.dampingFactor = 0.05;
         this.controls.maxPolarAngle = Math.PI / 2 - 0.02;
-        this.controls.target.set(0, 0.4, 0);
+        this.controls.target.set(0.15, 0.35, 0);
     }
 
     setupLightsAndFloor() {
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        // High-contrast studio lighting setup
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
         this.scene.add(ambientLight);
 
-        const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
-        dirLight.position.set(5, 8, 5);
-        dirLight.castShadow = true;
-        dirLight.shadow.mapSize.width = 1024;
-        dirLight.shadow.mapSize.height = 1024;
-        dirLight.shadow.bias = -0.0005;
-        this.scene.add(dirLight);
+        // Key Light (Main Warm/White Spotlight)
+        const keyLight = new THREE.DirectionalLight(0xffffff, 1.5);
+        keyLight.position.set(4, 7, 4);
+        keyLight.castShadow = true;
+        keyLight.shadow.mapSize.width = 2048;
+        keyLight.shadow.mapSize.height = 2048;
+        keyLight.shadow.bias = -0.0003;
+        this.scene.add(keyLight);
 
-        const cyanLight = new THREE.PointLight(0x00f2fe, 1.5, 6);
-        cyanLight.position.set(0, 2, 0);
-        this.scene.add(cyanLight);
+        // Fill Accent Light (Cyan Rim Light)
+        const cyanFill = new THREE.PointLight(0x00f2fe, 2.2, 8);
+        cyanFill.position.set(-1, 2.5, 2);
+        this.scene.add(cyanFill);
 
-        const gridHelper = new THREE.GridHelper(10, 20, 0x00f2fe, 0x1f293d);
+        // Under-chassis Ambient Glow
+        const greenGlow = new THREE.PointLight(0x00f5a0, 1.2, 4);
+        greenGlow.position.set(0, 0.2, 0);
+        this.scene.add(greenGlow);
+
+        const gridHelper = new THREE.GridHelper(10, 20, 0x00f2fe, 0x1e293b);
         gridHelper.position.y = 0;
         this.scene.add(gridHelper);
 
-        const groundGeo = new THREE.PlaneGeometry(12, 12);
+        const groundGeo = new THREE.PlaneGeometry(14, 14);
         const groundMat = new THREE.MeshStandardMaterial({
-            color: 0x0e1422,
-            roughness: 0.8,
-            metalness: 0.2
+            color: 0x0a0f1d,
+            roughness: 0.7,
+            metalness: 0.3
         });
         const ground = new THREE.Mesh(groundGeo, groundMat);
         ground.rotation.x = -Math.PI / 2;
@@ -104,7 +113,7 @@ class PhysicsViewport {
         this.scene.add(ground);
 
         // 3D Target Detection Ring Marker
-        const ringGeo = new THREE.RingGeometry(0.12, 0.15, 32);
+        const ringGeo = new THREE.RingGeometry(0.12, 0.16, 32);
         const ringMat = new THREE.MeshBasicMaterial({ color: 0x00f2fe, side: THREE.DoubleSide, transparent: true, opacity: 0 });
         this.targetMarker = new THREE.Mesh(ringGeo, ringMat);
         this.targetMarker.rotation.x = -Math.PI / 2;
@@ -148,7 +157,7 @@ class PhysicsViewport {
         this.robotGroup.position.set(0, 0, 0);
         this.robotGroup.rotation.set(0, 0, 0);
 
-        // 1. Base Chassis (Front is +X axis)
+        // 1. Base Chassis (Front is +X axis) - Premium Dark Metallic Slate
         const chassisGeo = new THREE.BoxGeometry(0.6, 0.15, 0.45);
         const chassisMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.8, roughness: 0.2 });
         const chassis = new THREE.Mesh(chassisGeo, chassisMat);
@@ -156,55 +165,94 @@ class PhysicsViewport {
         chassis.castShadow = true;
         this.robotGroup.add(chassis);
 
+        // Glowing Neon Cyan Chassis Belt
         const stripGeo = new THREE.BoxGeometry(0.62, 0.03, 0.47);
-        const stripMat = new THREE.MeshStandardMaterial({ color: 0x00f2fe, emissive: 0x00f2fe, emissiveIntensity: 0.5 });
+        const stripMat = new THREE.MeshStandardMaterial({ color: 0x00f2fe, emissive: 0x00f2fe, emissiveIntensity: 0.6 });
         const strip = new THREE.Mesh(stripGeo, stripMat);
         strip.position.y = 0.16;
         this.robotGroup.add(strip);
 
-        // 2. Wheels
+        // 2. Wheels - High Contrast Rubber & Silver Metallic Hubcaps
         const wheelGeo = new THREE.CylinderGeometry(0.1, 0.1, 0.06, 24);
-        const wheelMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.9 });
+        const wheelMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.8 });
+        const hubMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, metalness: 0.9, roughness: 0.1 });
+        const hubGeo = new THREE.CylinderGeometry(0.05, 0.05, 0.062, 16);
+
         const wheelPos = [
             [0.2, 0.1, 0.25], [-0.2, 0.1, 0.25],
             [0.2, 0.1, -0.25], [-0.2, 0.1, -0.25]
         ];
         wheelPos.forEach(pos => {
+            const wGroup = new THREE.Group();
+            wGroup.position.set(...pos);
+
             const w = new THREE.Mesh(wheelGeo, wheelMat);
             w.rotation.z = Math.PI / 2;
-            w.position.set(...pos);
             w.castShadow = true;
-            this.robotGroup.add(w);
-            this.wheels.push(w);
+            wGroup.add(w);
+
+            const hub = new THREE.Mesh(hubGeo, hubMat);
+            hub.rotation.z = Math.PI / 2;
+            wGroup.add(hub);
+
+            this.robotGroup.add(wGroup);
+            this.wheels.push(wGroup);
         });
 
         // 3. Articulated 3-DOF Arm (Shoulder -> Elbow -> Wrist)
-        const armBaseGeo = new THREE.CylinderGeometry(0.08, 0.1, 0.1, 16);
-        const armMat = new THREE.MeshStandardMaterial({ color: 0x00f2fe, metalness: 0.9, roughness: 0.1 });
-        const armBase = new THREE.Mesh(armBaseGeo, armMat);
+        // Shoulder Base Mount
+        const armBaseGeo = new THREE.CylinderGeometry(0.09, 0.11, 0.1, 24);
+        const silverMat = new THREE.MeshStandardMaterial({ color: 0xf1f5f9, metalness: 0.9, roughness: 0.15 });
+        const armBase = new THREE.Mesh(armBaseGeo, silverMat);
         armBase.position.set(0.18, 0.25, 0);
         this.robotGroup.add(armBase);
 
-        // Joint 1: Shoulder Pivot (j1Pivot)
+        // Joint 1: Shoulder Rotary Servo Pivot (j1Pivot)
         const j1Pivot = new THREE.Group();
         j1Pivot.position.set(0.18, 0.28, 0);
         this.robotGroup.add(j1Pivot);
         this.armJoints.push(j1Pivot); // armJoints[0]
 
-        const link1Geo = new THREE.BoxGeometry(0.06, 0.35, 0.06);
+        // Shoulder Metallic Servo Cap & LED Ring
+        const servoCapGeo = new THREE.CylinderGeometry(0.06, 0.06, 0.08, 20);
+        const servoCap = new THREE.Mesh(servoCapGeo, silverMat);
+        servoCap.rotation.x = Math.PI / 2;
+        j1Pivot.add(servoCap);
+
+        const ringMat1 = new THREE.MeshStandardMaterial({ color: 0x00f2fe, emissive: 0x00f2fe, emissiveIntensity: 0.8 });
+        const ring1 = new THREE.Mesh(new THREE.TorusGeometry(0.062, 0.008, 12, 24), ringMat1);
+        ring1.rotation.x = Math.PI / 2;
+        j1Pivot.add(ring1);
+
+        // Link 1 (Upper Arm): Heavy Industrial Dual-Tone Arm Beam
+        const link1Geo = new THREE.BoxGeometry(0.08, 0.35, 0.08);
         const link1 = new THREE.Mesh(link1Geo, chassisMat);
         link1.position.y = 0.175;
         link1.castShadow = true;
         j1Pivot.add(link1);
 
-        // Joint 2: Elbow Pivot (j2Pivot) - Creates "ㄱ" Bend
+        const link1Accent = new THREE.Mesh(new THREE.BoxGeometry(0.084, 0.28, 0.02), stripMat);
+        link1Accent.position.y = 0.175;
+        j1Pivot.add(link1Accent);
+
+        // Joint 2: Elbow Rotary Servo Pivot (j2Pivot)
         const j2Pivot = new THREE.Group();
         j2Pivot.position.set(0, 0.35, 0);
         j1Pivot.add(j2Pivot);
         this.armJoints.push(j2Pivot); // armJoints[1]
 
-        const link2Geo = new THREE.BoxGeometry(0.05, 0.3, 0.05);
-        const link2 = new THREE.Mesh(link2Geo, armMat);
+        const j2Cap = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.055, 0.08, 20), silverMat);
+        j2Cap.rotation.x = Math.PI / 2;
+        j2Pivot.add(j2Cap);
+
+        const ringMat2 = new THREE.MeshStandardMaterial({ color: 0x00f5a0, emissive: 0x00f5a0, emissiveIntensity: 0.8 });
+        const ring2 = new THREE.Mesh(new THREE.TorusGeometry(0.057, 0.008, 12, 24), ringMat2);
+        ring2.rotation.x = Math.PI / 2;
+        j2Pivot.add(ring2);
+
+        // Link 2 (Forearm): Titanium White High-Contrast Forearm Beam
+        const link2Geo = new THREE.BoxGeometry(0.07, 0.30, 0.07);
+        const link2 = new THREE.Mesh(link2Geo, silverMat);
         link2.position.y = 0.15;
         link2.castShadow = true;
         j2Pivot.add(link2);
@@ -212,89 +260,99 @@ class PhysicsViewport {
         // Joint 3: Wrist Pitch Pivot (j3Pivot)
         const j3Pivot = new THREE.Group();
         j3Pivot.position.set(0, 0.3, 0);
-        j3Pivot.rotation.z = 0; // Initial orientation: aligned naturally with arm in home position
+        j3Pivot.rotation.z = 0; // Aligned naturally in home position
         j2Pivot.add(j3Pivot);
         this.armJoints.push(j3Pivot); // armJoints[2]
 
-        // End-Effector 2-Jaw Parallel Gripper Assembly
+        const j3Cap = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.07, 20), silverMat);
+        j3Cap.rotation.x = Math.PI / 2;
+        j3Pivot.add(j3Cap);
+
+        // End-Effector 2-Jaw High-Contrast Parallel Gripper
         const gripperGroup = new THREE.Group();
         j3Pivot.add(gripperGroup);
         this.gripperGroup = gripperGroup;
 
-        // 1. Wrist Mount Bracket (Dark Metallic Steel)
-        const mountGeo = new THREE.CylinderGeometry(0.04, 0.045, 0.03, 16);
-        const mountMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.8, roughness: 0.3 });
-        const mount = new THREE.Mesh(mountGeo, mountMat);
+        // 1. Wrist Mount Bracket
+        const mount = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.05, 0.03, 16), chassisMat);
         mount.position.y = 0.015;
         gripperGroup.add(mount);
 
-        // 2. Linear Finger Slide Rail Chassis
-        const railGeo = new THREE.BoxGeometry(0.18, 0.025, 0.06);
-        const railMat = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.9, roughness: 0.2 });
-        const rail = new THREE.Mesh(railGeo, railMat);
-        rail.position.y = 0.035;
+        // 2. Linear Slide Rail Base (Bright Silver Aluminum Chassis)
+        const rail = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.035, 0.07), silverMat);
+        rail.position.y = 0.04;
+        rail.castShadow = true;
         gripperGroup.add(rail);
 
-        // 3. Status LED Accent Bar
-        const statusGeo = new THREE.BoxGeometry(0.08, 0.01, 0.062);
-        const statusMat = new THREE.MeshStandardMaterial({ color: 0x00f2fe, emissive: 0x00f2fe, emissiveIntensity: 0.8 });
-        const statusMesh = new THREE.Mesh(statusGeo, statusMat);
-        statusMesh.position.y = 0.035;
+        // 3. Central Dark Slide Track & Status LED
+        const track = new THREE.Mesh(new THREE.BoxGeometry(0.20, 0.038, 0.02), wheelMat);
+        track.position.y = 0.04;
+        gripperGroup.add(track);
+
+        const statusMesh = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.01, 0.072), stripMat);
+        statusMesh.position.y = 0.04;
         gripperGroup.add(statusMesh);
 
-        // 4. Left & Right Articulated Claw Fingers (Open Gap by default)
-        const fingerMat = new THREE.MeshStandardMaterial({
+        // 4. Large Electric Cyan & Green Claws with Dark Carbon Friction Pads
+        const clawMat = new THREE.MeshStandardMaterial({
+            color: 0x00f2fe,
+            emissive: 0x00f2fe,
+            emissiveIntensity: 0.4,
+            metalness: 0.5,
+            roughness: 0.1
+        });
+
+        const tipMat = new THREE.MeshStandardMaterial({
             color: 0x00f5a0,
             emissive: 0x00f5a0,
-            emissiveIntensity: 0.3,
-            metalness: 0.6,
-            roughness: 0.2
+            emissiveIntensity: 0.6
         });
 
         const padMat = new THREE.MeshStandardMaterial({
             color: 0x0f172a,
-            roughness: 0.9
+            roughness: 0.9,
+            metalness: 0.2
         });
 
         // Left Claw Assembly Group
         const clawL = new THREE.Group();
-        clawL.position.set(-0.08, 0.04, 0); // Wide open state (0.16m span)
+        clawL.position.set(-0.09, 0.04, 0); // Wide open state (0.18m clearance gap!)
 
-        const fPostL = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.12, 0.04), fingerMat);
-        fPostL.position.set(0, 0.06, 0);
+        const fPostL = new THREE.Mesh(new THREE.BoxGeometry(0.025, 0.15, 0.045), clawMat);
+        fPostL.position.set(0, 0.075, 0);
         fPostL.castShadow = true;
         clawL.add(fPostL);
 
-        const fTipL = new THREE.Mesh(new THREE.BoxGeometry(0.025, 0.02, 0.04), fingerMat);
-        fTipL.position.set(0.01, 0.12, 0);
+        const fTipL = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.025, 0.045), tipMat);
+        fTipL.position.set(0.012, 0.15, 0);
         clawL.add(fTipL);
 
-        const padL = new THREE.Mesh(new THREE.BoxGeometry(0.008, 0.10, 0.035), padMat);
-        padL.position.set(0.012, 0.06, 0);
+        const padL = new THREE.Mesh(new THREE.BoxGeometry(0.008, 0.12, 0.04), padMat);
+        padL.position.set(0.014, 0.075, 0);
         clawL.add(padL);
 
         gripperGroup.add(clawL);
 
         // Right Claw Assembly Group
         const clawR = new THREE.Group();
-        clawR.position.set(0.08, 0.04, 0); // Wide open state
+        clawR.position.set(0.09, 0.04, 0); // Wide open state
 
-        const fPostR = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.12, 0.04), fingerMat);
-        fPostR.position.set(0, 0.06, 0);
+        const fPostR = new THREE.Mesh(new THREE.BoxGeometry(0.025, 0.15, 0.045), clawMat);
+        fPostR.position.set(0, 0.075, 0);
         fPostR.castShadow = true;
         clawR.add(fPostR);
 
-        const fTipR = new THREE.Mesh(new THREE.BoxGeometry(0.025, 0.02, 0.04), fingerMat);
-        fTipR.position.set(-0.01, 0.12, 0);
+        const fTipR = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.025, 0.045), tipMat);
+        fTipR.position.set(-0.012, 0.15, 0);
         clawR.add(fTipR);
 
-        const padR = new THREE.Mesh(new THREE.BoxGeometry(0.008, 0.10, 0.035), padMat);
-        padR.position.set(-0.012, 0.06, 0);
+        const padR = new THREE.Mesh(new THREE.BoxGeometry(0.008, 0.12, 0.04), padMat);
+        padR.position.set(-0.014, 0.075, 0);
         clawR.add(padR);
 
         gripperGroup.add(clawR);
 
-        this.fingerMat = fingerMat;
+        this.fingerMat = clawMat;
         this.gripperFingers = [clawL, clawR];
     }
 
@@ -527,8 +585,8 @@ class PhysicsViewport {
     }
 
     resetCamera() {
-        this.camera.position.set(2.8, 2.2, 3.2);
-        this.controls.target.set(0, 0.4, 0);
+        this.camera.position.set(1.7, 1.3, 1.9);
+        this.controls.target.set(0.15, 0.35, 0);
         this.controls.update();
     }
 
