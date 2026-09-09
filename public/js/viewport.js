@@ -708,16 +708,21 @@ class PhysicsViewport {
         const t = Math.min(1.0, state.progress);
 
         if (step.type === 'drive_to' || step.type === 'drive_to_bin' || step.type === 'walk_to_ball') {
-            this.robotGroup.position.x = THREE.MathUtils.lerp(this.robotGroup.position.x, step.target.x, 0.1);
-            this.robotGroup.position.z = THREE.MathUtils.lerp(this.robotGroup.position.z, step.target.z, 0.1);
+            this.robotGroup.position.x = THREE.MathUtils.lerp(this.robotGroup.position.x, step.target.x, 0.15);
+            this.robotGroup.position.z = THREE.MathUtils.lerp(this.robotGroup.position.z, step.target.z, 0.15);
             
             const dx = step.target.x - this.robotGroup.position.x;
             const dz = step.target.z - this.robotGroup.position.z;
-            if (Math.abs(dx) > 0.01 || Math.abs(dz) > 0.01) {
+            if (Math.abs(dx) > 0.005 || Math.abs(dz) > 0.005) {
                 const targetYaw = -Math.atan2(dz, dx);
-                this.robotGroup.rotation.y = THREE.MathUtils.lerp(this.robotGroup.rotation.y, targetYaw, 0.15);
+                this.robotGroup.rotation.y = THREE.MathUtils.lerp(this.robotGroup.rotation.y, targetYaw, 0.2);
             }
             this.wheels.forEach(w => w.rotation.x += 0.15);
+
+            if (t >= 0.95) {
+                this.robotGroup.position.x = step.target.x;
+                this.robotGroup.position.z = step.target.z;
+            }
 
         } else if (step.type === 'lower_arm_L_shape' || step.type === 'lower_arm' || step.type === 'lift_arm' || step.type === 'dump_arm' || step.type === 'home_arm') {
             if (this.armJoints.length >= 3) {
